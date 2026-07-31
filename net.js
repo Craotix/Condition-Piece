@@ -26,6 +26,15 @@ const Net = (() => {
   const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    // TURN relay fallback — STUN alone can't get through some NAT types
+    // (symmetric NAT, some mobile carrier / corporate networks), where a
+    // connection can appear to succeed and then close shortly after. TURN
+    // relays traffic through a third-party server as a last resort so the
+    // connection survives even when a direct P2P path isn't possible.
+    // This is a free public server — fine for testing with friends, but
+    // consider a paid/self-hosted TURN server (see net.js comments) if you
+    // scale this up or it proves unreliable.
+    { urls: 'turn:freestun.net:3478', username: 'free', credential: 'free' },
   ];
 
   // Manual signaling can't trickle ICE candidates in after the fact — the
