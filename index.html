@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Condition — A One Piece Deduction Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=Courier+Prime&display=swap');
+
+  :root {
+    --parchment: #EDE3C8;
+    --parchment-light: #F6EFDC;
+    --parchment-dark: #DDD0AA;
+    --navy: #1B2A4A;
+    --navy-light: #2C3E63;
+    --red: #C23B22;
+    --red-dark: #8C2A18;
+    --gold: #D4A017;
+    --gold-light: #E8C158;
+    --ink: #1A1410;
+    --ink-soft: #4A4036;
+    --green: #2F6B4F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Archivo', sans-serif;
+    background: var(--navy);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  .app {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    text-align: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 3px double rgba(212,160,23,0.4);
+  }
+
+  .app-title {
+    font-family: 'Archivo Black', sans-serif;
+    color: var(--parchment);
+    font-size: 42px;
+    letter-spacing: 2px;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .app-subtitle {
+    color: var(--gold-light);
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .pass-icon { font-size: 40px; margin-bottom: 6px; }
+
+  .pass-device-screen, .condition-entry-screen { padding: 10px 0; }
+
+  /* ===== SETUP SCREEN ===== */
+  .setup-card {
+    background: var(--parchment);
+    border-radius: 4px;
+    padding: 32px;
+    max-width: 560px;
+    margin: 0 auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .setup-card::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border: 2px solid rgba(27,42,74,0.15);
+    pointer-events: none;
+  }
+
+  .setup-step { margin-bottom: 24px; }
+
+  .setup-label {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .setup-hint {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  input[type="text"], select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--navy);
+    border-radius: 3px;
+    background: var(--parchment-light);
+    color: var(--ink);
+    font-family: 'Archivo', sans-serif;
+    font-size: 15px;
+  }
+
+  input[type="text"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--red);
+  }
+
+  .player-condition-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.4);
+    padding: 10px;
+    border-radius: 3px;
+  }
+
+  .player-condition-row .pname {
+    font-weight: 700;
+    min-width: 110px;
+    color: var(--navy);
+    font-size: 14px;
+  }
+
+  .btn {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    padding: 12px 20px;
+    border-radius: 3px;
+    border: 2px solid var(--navy);
+    background: var(--navy);
+    color: var(--parchment);
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    text-transform: uppercase;
+  }
+
+  .btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.25); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-primary { background: var(--red); border-color: var(--red-dark); width: 100%; padding: 14px; font-size: 16px; margin-top: 8px; }
+  .btn-gold { background: var(--gold); border-color: #9c7710; color: var(--ink); }
+  .btn-outline { background: transparent; color: var(--navy); }
+  .btn-outline:disabled { color: var(--ink-soft); }
+  .btn-small { padding: 7px 12px; font-size: 12px; }
+  .btn-full { width: 100%; }
+
+  /* ===== GAME SCREEN ===== */
+  .game-topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .turn-indicator {
+    background: var(--parchment);
+    border-radius: 4px;
+    padding: 10px 18px;
+    text-align: center;
+  }
+
+  .turn-indicator .label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
+  .turn-indicator .value { font-size: 20px; font-weight: 700; color: var(--navy); font-family: 'Archivo Black', sans-serif; }
+
+  .logpose {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #8a8d8f, var(--navy) 65%, #0d1626 100%);
+    border: 5px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 0 14px rgba(0,0,0,0.5);
+  }
+
+  .logpose-face {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, var(--gold-light), var(--gold) 55%, #9c7710 100%);
+    border: 2px solid var(--navy);
+    position: relative;
+    box-shadow: inset 0 2px 6px rgba(255,255,255,0.4), inset 0 -3px 8px rgba(0,0,0,0.25);
+  }
+
+  .logpose-needle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 30px;
+    background: linear-gradient(to top, var(--red) 50%, var(--navy) 50%);
+    transform-origin: bottom center;
+    transform: translate(-50%, -100%) rotate(0deg);
+    border-radius: 2px;
+    transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .logpose-needle::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--ink);
+    border-radius: 50%;
+    transform: translateX(-50%);
+  }
+
+  .logpose .timer-text {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 15px;
+    color: var(--navy);
+    letter-spacing: 0.5px;
+  }
+
+  .logpose.urgent .logpose-face { background: radial-gradient(circle at 40% 35%, #f0a090, var(--red) 60%, var(--red-dark) 100%); }
+  .logpose.urgent .logpose-needle { background: linear-gradient(to top, var(--navy) 50%, var(--parchment-light) 50%); }
+  .logpose.urgent .timer-text { color: var(--parchment-light); }
+
+  .actions-panel {
+    background: var(--parchment);
+    border-radius: 4px;
+    padding: 12px;
+    text-align: right;
+  }
+
+  .actions-panel .label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; }
+
+  .resource-pips { display: flex; gap: 6px; justify-content: flex-end; }
+
+  .pip {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--navy);
+    background: var(--gold);
+  }
+  .pip.used { background: transparent; opacity: 0.3; }
+
+  .resource-row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .resource-row .rlabel { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== MAIN GRID ===== */
+  .game-main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+  }
+
+  .panel {
+    background: var(--parchment);
+    border-radius: 4px;
+    padding: 18px;
+  }
+
+  .panel-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 15px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 12px 0;
+    border-bottom: 2px solid var(--navy);
+    padding-bottom: 6px;
+  }
+
+  /* search */
+  .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .search-row input { flex: 1; }
+
+  .filter-toggle { margin-bottom: 10px; }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+    background: rgba(255,255,255,0.4);
+    padding: 10px;
+    border-radius: 3px;
+  }
+
+  .filter-grid label { font-size: 11px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; display: block; margin-bottom: 3px; }
+  .filter-grid select { font-size: 13px; padding: 6px 8px; }
+
+  .results-list {
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .char-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--parchment-light);
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 3px;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+
+  .char-row:hover { border-color: var(--red); }
+  .char-row.disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .char-portrait {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--parchment);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    border: 2px solid var(--gold);
+  }
+
+  .char-row-info { flex: 1; min-width: 0; }
+  .char-row-name { font-weight: 700; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .char-row-meta { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .char-row-status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 3px; flex-shrink: 0; text-transform: uppercase; }
+  .status-yes { background: var(--green); color: white; }
+  .status-no { background: var(--red); color: white; }
+
+  /* yes list / wanted board */
+  .wanted-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .wanted-slot {
+    aspect-ratio: 3/4;
+    border: 2px dashed rgba(27,42,74,0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.3);
+  }
+
+  .wanted-poster {
+    aspect-ratio: 3/4;
+    background: var(--parchment-light);
+    border: 3px solid var(--ink);
+    border-radius: 2px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    box-shadow: 2px 3px 6px rgba(0,0,0,0.3);
+  }
+
+  .wanted-poster .wp-header { font-size: 9px; letter-spacing: 1px; font-weight: 700; color: var(--red); text-transform: uppercase; }
+  .wanted-poster .wp-portrait {
+    width: 100%;
+    flex: 1;
+    background: var(--navy);
+    color: var(--parchment);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+    margin: 4px 0;
+    border: 2px solid var(--ink);
+  }
+  .wanted-poster .wp-name { font-size: 10px; font-weight: 700; line-height: 1.2; color: var(--ink); }
+
+  .empty-note { font-size: 13px; color: var(--ink-soft); font-style: italic; text-align: center; padding: 20px 0; }
+
+  /* log / history */
+  .history-log {
+    max-height: 160px;
+    overflow-y: auto;
+    font-family: 'Courier Prime', monospace;
+    font-size: 12.5px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 3px;
+    padding: 10px;
+    line-height: 1.6;
+  }
+
+  .log-entry { margin-bottom: 4px; }
+  .log-yes { color: var(--green); font-weight: 700; }
+  .log-no { color: var(--red-dark); font-weight: 700; }
+  .log-hint { color: #8c6d10; font-weight: 700; }
+  .log-q { color: var(--navy); font-weight: 700; }
+
+  /* guess area */
+  .guess-area { margin-top: 16px; }
+  .guess-area textarea { resize: none; height: 64px; }
+
+  /* modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: var(--parchment);
+    border-radius: 4px;
+    padding: 28px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+
+  .modal-box h2 { font-family: 'Archivo Black', sans-serif; color: var(--navy); margin-top: 0; }
+  .modal-box p { color: var(--ink-soft); line-height: 1.6; }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-hint { background: var(--gold); color: var(--ink); }
+  .badge-question { background: var(--navy); color: var(--parchment); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy);
+    color: var(--parchment);
+    padding: 12px 22px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+  }
+
+  .hidden-from-self {
+    filter: blur(0px);
+  }
+
+  .waiting-banner {
+    display: none;
+    background: var(--navy);
+    color: var(--parchment);
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .my-condition-panel {
+    background: rgba(255,255,255,0.5);
+    border: 2px dashed rgba(27,42,74,0.3);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .my-condition-panel .mc-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
+  .my-condition-panel .mc-text { font-weight: 700; color: var(--navy); }
+  .my-condition-panel .mc-role { font-size: 12px; color: var(--red-dark); font-weight: 700; text-transform: uppercase; }
+
+  /* ===== LOBBY SCREEN ===== */
+  .lobby-tabs { display: flex; gap: 8px; margin-bottom: 22px; }
+  .lobby-tab {
+    flex: 1;
+    padding: 11px;
+    border: 2px solid var(--navy);
+    background: transparent;
+    color: var(--navy);
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .lobby-tab.active { background: var(--navy); color: var(--parchment); }
+
+  .code-row { display: flex; gap: 8px; align-items: flex-start; }
+  .code-row textarea { font-family: 'Courier Prime', monospace; font-size: 11px; height: 74px; }
+
+  .lobby-status { margin-top: 14px; font-size: 13px; color: var(--ink-soft); text-align: center; font-weight: 600; min-height: 18px; }
+
+  #your-name-input { margin-bottom: 10px; }
+
+  .conn-lost-banner {
+    background: var(--red);
+    color: white;
+    text-align: center;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    letter-spacing: 0.3px;
+  }
+
+  @media (max-width: 760px) {
+    .game-main { grid-template-columns: 1fr; }
+    .game-topbar { grid-template-columns: 1fr; text-align: center; }
+    .logpose { margin: 0 auto; }
+    .wanted-board { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .app-title { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <h1 class="app-title">Condition</h1>
+    <div class="app-subtitle">A One Piece Deduction Game</div>
+  </div>
+
+  <div class="conn-lost-banner" id="conn-lost-banner" style="display:none;"></div>
+
+  <!-- ===================== LOBBY SCREEN ===================== -->
+  <div class="screen active" id="screen-lobby">
+    <div class="setup-card">
+      <div class="lobby-tabs">
+        <button class="lobby-tab active" id="btn-tab-host">Host a game</button>
+        <button class="lobby-tab" id="btn-tab-join">Join a game</button>
+      </div>
+
+      <div id="lobby-connect-step">
+        <div id="lobby-panel-host">
+          <div class="setup-step">
+            <label class="setup-label">1. Create a game code</label>
+            <button class="btn btn-primary" id="btn-host-create">Create game code</button>
+            <div class="setup-hint">This can take a few seconds while your connection info is gathered.</div>
+          </div>
+          <div class="setup-step" id="host-offer-step" style="display:none;">
+            <label class="setup-label">2. Send this code to the other player</label>
+            <div class="code-row">
+              <textarea id="offer-code" readonly></textarea>
+              <button class="btn btn-outline btn-small" id="btn-copy-offer">Copy</button>
+            </div>
+          </div>
+          <div class="setup-step" id="host-answer-step" style="display:none;">
+            <label class="setup-label">3. Paste the code they send back</label>
+            <textarea id="answer-code-input" placeholder="Paste their code here"></textarea>
+            <button class="btn btn-primary" id="btn-host-accept-answer">Connect</button>
+          </div>
+        </div>
+
+        <div id="lobby-panel-join" style="display:none;">
+          <div class="setup-step">
+            <label class="setup-label">1. Paste the host's game code</label>
+            <textarea id="offer-code-input" placeholder="Paste the code they sent you"></textarea>
+            <button class="btn btn-primary" id="btn-join-connect">Join game</button>
+          </div>
+          <div class="setup-step" id="join-answer-step" style="display:none;">
+            <label class="setup-label">2. Send this code back to the host</label>
+            <div class="code-row">
+              <textarea id="answer-code" readonly></textarea>
+              <button class="btn btn-outline btn-small" id="btn-copy-answer">Copy</button>
+            </div>
+            <div class="setup-hint">Waiting for them to connect…</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="lobby-name-step" style="display:none; text-align:center;">
+        <div class="pass-icon">🔗</div>
+        <p class="setup-hint" style="font-size:15px;">Connected! What's your name?</p>
+        <div id="lobby-name-form">
+          <input type="text" id="your-name-input" placeholder="Enter your name">
+          <button class="btn btn-primary" id="btn-submit-name">Continue</button>
+        </div>
+        <div id="lobby-name-waiting" style="display:none;">
+          <p class="setup-hint" style="font-size:15px;" id="lobby-name-waiting-text"></p>
+        </div>
+      </div>
+
+      <div class="lobby-status" id="lobby-status"></div>
+    </div>
+  </div>
+
+  <!-- ===================== SETUP SCREEN ===================== -->
+  <div class="screen" id="screen-setup">
+    <div class="setup-card">
+      <div id="setup-step-conditions">
+        <div class="condition-entry-screen" id="condition-entry-screen">
+          <div id="condition-entry-form">
+            <div class="setup-step">
+              <label class="setup-label" id="condition-entry-label">Write your secret condition</label>
+              <textarea id="condition-entry-input" placeholder='e.g. "Characters who have the will of D."' style="height:70px;"></textarea>
+              <div class="setup-hint">Only your device shows this. Use the dev switcher above to enter the other player's condition on their "device".</div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-condition">Lock in my condition</button>
+          </div>
+          <div id="condition-entry-waiting" style="display:none; text-align:center;">
+            <div class="pass-icon">✅</div>
+            <p class="setup-hint" style="font-size:15px;" id="condition-entry-waiting-text"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== GAME SCREEN ===================== -->
+  <div class="screen" id="screen-game">
+    <div class="game-topbar">
+      <div class="actions-panel" id="panel-resources-left"></div>
+      <div style="text-align:center;">
+        <div class="turn-indicator" style="margin-bottom:10px;">
+          <div class="label">Current turn</div>
+          <div class="value" id="current-turn-name">—</div>
+        </div>
+        <div class="logpose" id="timer-display">
+          <div class="logpose-face">
+            <div class="logpose-needle" id="logpose-needle"></div>
+          </div>
+          <span class="timer-text" id="timer-text">90</span>
+        </div>
+      </div>
+      <div class="actions-panel" id="panel-resources-right"></div>
+    </div>
+
+    <div class="waiting-banner" id="waiting-banner"></div>
+    <button class="btn btn-outline btn-full" id="btn-cancel-pending" style="display:none; margin-top:-10px; margin-bottom:16px;">Cancel this ask</button>
+
+    <div class="my-condition-panel">
+      <div>
+        <div class="mc-label">Your condition (<span id="my-condition-name"></span>)</div>
+        <div class="mc-text" id="my-condition-text"></div>
+      </div>
+      <div class="mc-role" id="my-role-badge"></div>
+    </div>
+
+    <div class="game-main">
+      <!-- LEFT: search + filter -->
+      <div class="panel">
+        <h2 class="panel-title">Ask about a character</h2>
+        <div class="empty-note" id="browse-mode-note" style="display:none; padding:0 0 10px 0; text-align:left;"></div>
+        <div class="search-row">
+          <input type="text" id="search-input" placeholder="Type a character name…" autocomplete="off">
+        </div>
+        <div class="filter-toggle">
+          <button class="btn btn-outline btn-small" id="btn-toggle-filters">Show filters ▾</button>
+        </div>
+        <div class="filter-grid" id="filter-grid" style="display:none;"></div>
+        <div class="results-list" id="results-list"></div>
+
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-gold btn-full" id="btn-use-hint">Use a hint (<span id="hints-left">2</span> left)</button>
+          <button class="btn btn-outline btn-full" id="btn-ask-yesno">Ask a yes/no question about the condition</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: yes list + log + guess -->
+      <div class="panel">
+        <h2 class="panel-title">Your "yes" list <span style="font-weight:400; font-size:12px; color:var(--ink-soft);">(max 5)</span></h2>
+        <div class="wanted-board" id="wanted-board"></div>
+
+        <h2 class="panel-title">Round log</h2>
+        <div class="history-log" id="history-log"><div class="empty-note">No asks yet this round.</div></div>
+
+        <div class="guess-area">
+          <button class="btn btn-primary" id="btn-open-guess">Guess the condition</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-overlay" id="modal-answer-character">
+  <div class="modal-box">
+    <h2>Pass to <span id="character-ask-owner-name"></span></h2>
+    <p>Your condition: <span id="character-ask-owner-condition" style="font-weight:700;"></span></p>
+    <p>Does <strong id="character-ask-display" style="color:var(--navy);"></strong> fit your condition?</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-char-yes" style="background:var(--green); border-color:#1e4a36;">Yes, they fit</button>
+      <button class="btn btn-primary" id="btn-char-no">No, they don't</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-yesno">
+  <div class="modal-box">
+    <h2>Ask a yes/no question</h2>
+    <p>This uses your turn's ask, just like requesting a character. Type your question — the other player will answer yes or no.</p>
+    <textarea id="yesno-input" placeholder='e.g. "Does this involve a Warlord of the Sea?"' style="height:70px;"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-cancel-yesno">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-yesno">Ask the other player</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-answer-yesno">
+  <div class="modal-box">
+    <h2>Answer the question</h2>
+    <p>Your condition: <span id="yesno-owner-condition" style="font-weight:700;"></span></p>
+    <p id="yesno-question-display" style="font-weight:700; color:var(--navy);"></p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-answer-yes" style="background:var(--green); border-color:#1e4a36;">Yes</button>
+      <button class="btn btn-primary" id="btn-answer-no">No</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-hint">
+  <div class="modal-box">
+    <h2>Hint requested</h2>
+    <p id="hint-instructions">Think of a helpful hint and type it below — you're free to phrase it however you like, it just can't directly name the condition.</p>
+    <p>Your condition: <span id="hint-owner-condition" style="font-weight:700;"></span></p>
+    <textarea id="hint-input" placeholder="Type a hint for the guesser…" style="height:70px;"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-submit-hint">Give hint</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-guess">
+  <div class="modal-box">
+    <h2>Guess the condition</h2>
+    <p>Type your guess. This will use up your remaining asks for the round if it's wrong — so make it count.</p>
+    <textarea id="guess-input" placeholder="What do you think the condition is?"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-cancel-guess">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-guess">Lock in guess</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reveal-guess">
+  <div class="modal-box">
+    <h2>Pass to the condition-owner</h2>
+    <p style="font-weight:700; color:var(--navy);" id="guess-text-display"></p>
+    <p>Your condition was: <span id="actual-condition-display" style="font-weight:700;"></span></p>
+    <p>Was the guess correct?</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-guess-correct" style="background:var(--green); border-color:#1e4a36;">Correct — round over</button>
+      <button class="btn btn-primary" id="btn-guess-incorrect">Incorrect — keep going</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-round-over">
+  <div class="modal-box">
+    <h2 id="round-over-title">Round over</h2>
+    <p id="round-over-text"></p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-next-round">Next round →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="characters.js"></script>
+<script src="net.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
